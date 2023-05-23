@@ -140,6 +140,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
         current_state = task.reset()
 
         # get initial observations and initialise histories
+        # The initial observations will be gathered from the model (and probably would need to be converted to a relevant form)
         initial_observations = self._get_task_observations(task)
         self._update_histories(observation_history, compressed_observation_history, initial_observations)
 
@@ -247,7 +248,9 @@ class ISAAlgorithmBase(LearningAlgorithm):
     '''
     Task Management Methods (getting observations)
     '''
+    # This will need to change to use my model?
     def _get_task_observations(self, task):
+        # Use model here
         observations = task.get_observations()
         if self.use_restricted_observables:
             return observations.intersection(task.get_restricted_observables())
@@ -369,6 +372,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
                 return True
         return False  # whether example sets have been updated
 
+    # Do I add the notion of an example weight when adding the observation history to the example set?
     def _update_example_set(self, example_set, observation_history, compressed_observation_history):
         """Updates the a given example set with the corresponding history of observations depending on whether
         compressed traces are used or not to learn the automata. An exception is thrown if a trace is readded."""
@@ -418,6 +422,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
         else:
             raise RuntimeError("Error: Couldn't find an automaton under the specified timeout!")
 
+    # Somewhere in this generation of the ILASP task I need to pass in the fact that the goal, dend and inc examples have weights attached to them?
     def _generate_ilasp_task(self, task, domain_id):
         utils.mkdir(self.get_automaton_task_folder(domain_id))
 

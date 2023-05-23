@@ -84,7 +84,7 @@ get_plot_name() {
   fi
 }
 
-PAPER_EXPERIMENTS_PATH=$(dirname $(realpath $0))/../../paper-experiments
+PAPER_EXPERIMENTS_PATH=$(dirname $(realpath $0))/../paper-experiments
 BASE_DIR=$PAPER_EXPERIMENTS_PATH/results
 PLOT_CMD="python -m plot_utils.plot_curves"
 STATS_CMD="python -m result_processing.collect_stats"
@@ -242,18 +242,18 @@ get_waterworld_handcrafted_automata_experiment_results() {
 }
 
 # officeworld experiments results
-get_officeworld_dataset_and_steps_experiment_results
-get_officeworld_restricted_observables_experiment_results
-get_officeworld_uncompressed_traces_experiment_results
-get_officeworld_cyclic_automata_experiment_results
-get_officeworld_num_disjunctions_experiment_results
-get_officeworld_symmetry_breaking_experiment_results
-get_officeworld_interleaving_rl_algorithms_experiment_results
-get_officeworld_handcrafted_automata_experiment_results
+# get_officeworld_dataset_and_steps_experiment_results
+# get_officeworld_restricted_observables_experiment_results
+# get_officeworld_uncompressed_traces_experiment_results
+# get_officeworld_cyclic_automata_experiment_results
+# get_officeworld_num_disjunctions_experiment_results
+# get_officeworld_symmetry_breaking_experiment_results
+# get_officeworld_interleaving_rl_algorithms_experiment_results
+# get_officeworld_handcrafted_automata_experiment_results
 
 # craftworld experiments results
-get_craftworld_interleaving_rl_algorithms_experiment_results
-get_craftworld_handcrafted_automata_experiment_results
+# get_craftworld_interleaving_rl_algorithms_experiment_results
+# get_craftworld_handcrafted_automata_experiment_results
 
 # waterworld experiments results
 get_waterworld_interleaving_rl_algorithms_experiment_results

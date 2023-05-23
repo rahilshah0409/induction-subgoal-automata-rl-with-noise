@@ -10,6 +10,7 @@ ILASP_OPERATION_SOLVE = "solve"
 ILASP_OPERATION_SEARCH_SPACE = "search_space"
 
 
+# I assume this will also have to change so that ILASP could be run with weights assigned to them. This may involve changes elsewhere
 def solve_ilasp_task(ilasp_problem_filename, output_filename, version="2", max_body_literals=1, use_simple=True,
                      timeout=60*35, binary_folder_name=None, compute_minimal=False, operation=ILASP_OPERATION_SOLVE):
     with open(output_filename, 'w') as f:
