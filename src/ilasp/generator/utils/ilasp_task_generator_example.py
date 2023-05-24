@@ -39,7 +39,7 @@ def _generate_goal_examples(examples, is_rejecting):
         example = examples[i]
         id = "p{}".format(i)
         ids.append(id)
-        weight = 0.7
+        weight = 7
         if is_rejecting:
             example_str += "#pos(" + id + "@{}, {{accept}}, {{reject}}, {{\n".format(weight)
         else:
@@ -56,7 +56,7 @@ def _generate_deadend_examples(examples):
         example = examples[i]
         id = "n{}".format(i)
         ids.append(id)
-        weight = 0.7
+        weight = 7
         example_str += "#pos(" + id + "@{}, {{reject}}, {{accept}}, {{\n".format(weight)
         example_str += _generate_example(example)
         example_str += "}).\n\n"
@@ -70,7 +70,7 @@ def _generate_incomplete_examples(examples, is_rejecting):
         example = examples[i]
         id = "i{}".format(i)
         ids.append(id)
-        weight = 0.7
+        weight = 7
         if is_rejecting:
             example_str += "#pos(" + id + "@{}, {{}}, {{accept, reject}}, {{\n".format(weight)
         else:

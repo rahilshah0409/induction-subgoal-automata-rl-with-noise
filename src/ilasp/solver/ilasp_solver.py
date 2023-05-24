@@ -11,7 +11,7 @@ ILASP_OPERATION_SEARCH_SPACE = "search_space"
 
 
 # I assume this will also have to change so that ILASP could be run with weights assigned to them. This may involve changes elsewhere
-def solve_ilasp_task(ilasp_problem_filename, output_filename, version="2", max_body_literals=1, use_simple=True,
+def solve_ilasp_task(ilasp_problem_filename, output_filename, version="2", max_body_literals=1,
                      timeout=60*35, binary_folder_name=None, compute_minimal=False, operation=ILASP_OPERATION_SOLVE):
     with open(output_filename, 'w') as f:
         arguments = []
@@ -32,13 +32,13 @@ def solve_ilasp_task(ilasp_problem_filename, output_filename, version="2", max_b
                           ilasp_problem_filename
                           ])
 
-        if use_simple:
-            arguments.append("--simple")  # simplify the representations of contexts
+        # if use_simple:
+        #     arguments.append("--simple")  # simplify the representations of contexts
 
-        if binary_folder_name is not None:
-            arguments.append("--clingo")
-            clingo_binary = CLINGO_MINIMAL_BINARY_NAME if compute_minimal else CLINGO_BINARY_NAME
-            arguments.append("\"" + os.path.join(binary_folder_name, clingo_binary) + "\"")
+        # if binary_folder_name is not None:
+        #     arguments.append("--clingo")
+        #     clingo_binary = CLINGO_MINIMAL_BINARY_NAME if compute_minimal else CLINGO_BINARY_NAME
+        #     arguments.append("\"" + os.path.join(binary_folder_name, clingo_binary) + "\"")
 
         if operation == ILASP_OPERATION_SEARCH_SPACE:
             arguments.append("-s")
