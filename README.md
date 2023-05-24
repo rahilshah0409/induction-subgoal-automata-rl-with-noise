@@ -106,6 +106,7 @@ python -m config.config_generator [--maximum_episode_length MAXIMUM_EPISODE_LENG
                                   [--rl_guidance_method RL_GUIDANCE_METHOD]
                                   [--avoid_learning_negative_only_formulas]
                                   [--environments ENVIRONMENTS [ENVIRONMENTS ...]]
+                                  [--use_velocities USE_VELOCITIES]
                                   [--use_gpu] [--multitask]
                                   domain algorithm num_runs root_experiments_path
                                   experiment_folder_name
@@ -140,6 +141,7 @@ no method is used):
 * `--avoid_learning_negative_only_formulas` indicates whether to avoid learning formulas formed only by negated observables.
 * `--environments` is a list of the environments for which the configuration files are generated. You should use the aliases
 shown in [`run_isa.py`](src/run_isa.py) (e.g., `coffee`, `coffee-mail`). They all must correspond to the `domain` specified before.
+* `--use_velocities` is a boolean flag that indicates whether or not the coloured balls in any specified WaterWorld environment are frozen or not. This must only be used when the `domain` is `waterworld`.
 * `--use_gpu` indicates whether to use the GPU when deep learning is applied (e.g., in `WaterWorld` tasks).
 * `--multitask` indicates whether to enable the multi-task setting (i.e., learn a policy and an automaton for each environment).
 

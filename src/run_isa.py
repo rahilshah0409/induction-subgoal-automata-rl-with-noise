@@ -16,7 +16,7 @@ from utils import utils
 ENV_SUBGOAL_AUTOMATA_PREFIX = "gym_subgoal_automata:"
 
 
-def get_environment_classes(environment_names):
+def get_environment_classes(environment_names, use_velocities_flag):
     environment_classes = []
 
     # office world
@@ -46,46 +46,47 @@ def get_environment_classes(environment_names):
         environment_classes.append(("OfficeWorldPatrolABCDStrict-v0", {}))
 
     # water world
+    env_params = {} if use_velocities_flag is None else {"use_velocities": use_velocities_flag}
     if "water-rg" in environment_names:
-        environment_classes.append(("WaterWorldRedGreen-v0", {}))
+        environment_classes.append(("WaterWorldRedGreen-v0", env_params))
     if "water-bc" in environment_names:
-        environment_classes.append(("WaterWorldBlueCyan-v0", {}))
+        environment_classes.append(("WaterWorldBlueCyan-v0", env_params))
     if "water-my" in environment_names:
-        environment_classes.append(("WaterWorldMagentaYellow-v0", {}))
+        environment_classes.append(("WaterWorldMagentaYellow-v0", env_params))
     if "water-rg-bc" in environment_names:
-        environment_classes.append(("WaterWorldRedGreenAndBlueCyan-v0", {}))
+        environment_classes.append(("WaterWorldRedGreenAndBlueCyan-v0", env_params))
     if "water-bc-my" in environment_names:
-        environment_classes.append(("WaterWorldBlueCyanAndMagentaYellow-v0", {}))
+        environment_classes.append(("WaterWorldBlueCyanAndMagentaYellow-v0", env_params))
     if "water-rg-my" in environment_names:
-        environment_classes.append(("WaterWorldRedGreenAndMagentaYellow-v0", {}))
+        environment_classes.append(("WaterWorldRedGreenAndMagentaYellow-v0", env_params))
     if "water-rg-bc-my" in environment_names:
-        environment_classes.append(("WaterWorldRedGreenAndBlueCyanAndMagentaYellow-v0", {}))
+        environment_classes.append(("WaterWorldRedGreenAndBlueCyanAndMagentaYellow-v0", env_params))
     if "water-rgb-cmy" in environment_names:
-        environment_classes.append(("WaterWorldRedGreenBlueAndCyanMagentaYellow-v0", {}))
+        environment_classes.append(("WaterWorldRedGreenBlueAndCyanMagentaYellow-v0", env_params))
     if "water-rg-strict" in environment_names:
-        environment_classes.append(("WaterWorldRedGreenStrict-v0", {}))
+        environment_classes.append(("WaterWorldRedGreenStrict-v0", env_params))
     if "water-rgb-strict" in environment_names:
-        environment_classes.append(("WaterWorldRedGreenBlueStrict-v0", {}))
+        environment_classes.append(("WaterWorldRedGreenBlueStrict-v0", env_params))
     if "water-cmy-strict" in environment_names:
-        environment_classes.append(("WaterWorldCyanMagentaYellowStrict-v0", {}))
+        environment_classes.append(("WaterWorldCyanMagentaYellowStrict-v0", env_params))
     if "water-r-bc" in environment_names:
-        environment_classes.append(("WaterWorldRedAndBlueCyan-v0", {}))
+        environment_classes.append(("WaterWorldRedAndBlueCyan-v0", env_params))
     if "water-rg-b" in environment_names:
-        environment_classes.append(("WaterWorldRedGreenAndBlue-v0", {}))
+        environment_classes.append(("WaterWorldRedGreenAndBlue-v0", env_params))
     if "water-rgb" in environment_names:
-        environment_classes.append(("WaterWorldRedGreenBlue-v0", {}))
+        environment_classes.append(("WaterWorldRedGreenBlue-v0", env_params))
     if "water-rgbc" in environment_names:
-        environment_classes.append(("WaterWorldRedGreenBlueCyan-v0", {}))
+        environment_classes.append(("WaterWorldRedGreenBlueCyan-v0", env_params))
     if "water-rgbcy" in environment_names:
-        environment_classes.append(("WaterWorldRedGreenBlueCyanYellow-v0", {}))
+        environment_classes.append(("WaterWorldRedGreenBlueCyanYellow-v0", env_params))
     if "water-r-g-b" in environment_names:
-        environment_classes.append(("WaterWorldRedAndGreenAndBlue-v0", {}))
+        environment_classes.append(("WaterWorldRedAndGreenAndBlue-v0", env_params))
     if "water-rg-avoid-m" in environment_names:
-        environment_classes.append(("WaterWorldRedGreenAvoidMagenta-v0", {}))
+        environment_classes.append(("WaterWorldRedGreenAvoidMagenta-v0", env_params))
     if "water-rg-avoid-my" in environment_names:
-        environment_classes.append(("WaterWorldRedGreenAvoidMagentaYellow-v0", {}))
+        environment_classes.append(("WaterWorldRedGreenAvoidMagentaYellow-v0", env_params))
     if "water-r-avoid-m" in environment_names:
-        environment_classes.append(("WaterWorldRedAvoidMagenta-v0", {}))
+        environment_classes.append(("WaterWorldRedAvoidMagenta-v0", env_params))
 
     # craft world
     if "make-plank" in environment_names:
@@ -185,7 +186,7 @@ def get_predefined_tasks(environment_classes, config):
 
 
 def get_algorithm(algorithm_name, config):
-    environment_classes = get_environment_classes(get_param(config, "environments"))
+    environment_classes = get_environment_classes(get_param(config, "environments"), get_param(config, "use_velocities"))
 
     task_generation_method = get_param(config, "task_generation_method")
     if task_generation_method == "random":

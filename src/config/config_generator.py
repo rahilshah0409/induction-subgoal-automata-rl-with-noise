@@ -203,6 +203,7 @@ def _get_argparser():
     parser.add_argument("--rl_guidance_method", "-g", default=None, help="use method to guide the RL agent (qrm: max_distance, min_distance, hrl: pseudorewards)")
     parser.add_argument("--avoid_learning_negative_only_formulas", "-n", action="store_true", help="whether to allow learning formulas formed only by negative literals")
     parser.add_argument("--environments", nargs='+', default=None, help="list of environments of the specified domain")
+    parser.add_argument("--use_velocities", default=None, help="whether to have the coloured balls frozen in the waterworld environment")
 
     parser.add_argument("--use_gpu", action="store_true", help="whether to use the gpu")
     parser.add_argument("--timed", action="store_true", help="whether it is an experiment whose running time should be compared with others")
