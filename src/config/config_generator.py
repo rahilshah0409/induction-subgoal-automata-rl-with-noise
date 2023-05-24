@@ -73,6 +73,7 @@ def _set_gridworld_rl_config(config, args):
 
 def _set_waterworld_rl_config(config, args):
     config["random_restart"] = True if args.random_restart is None else args.random_restart
+    config["use_velocities"] = True if args.use_velocities is None else args.use_velocities
     config[LearningAlgorithm.DEBUG] = False
     config[LearningAlgorithm.TRAIN_MODEL] = True
     config[LearningAlgorithm.NUM_EPISODES] = 50000

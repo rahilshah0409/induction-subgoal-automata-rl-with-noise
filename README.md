@@ -107,6 +107,7 @@ python -m config.config_generator [--maximum_episode_length MAXIMUM_EPISODE_LENG
                                   [--avoid_learning_negative_only_formulas]
                                   [--environments ENVIRONMENTS [ENVIRONMENTS ...]]
                                   [--use_velocities USE_VELOCITIES]
+                                  [--random_restart RANDOM_RESTART]
                                   [--use_gpu] [--multitask]
                                   domain algorithm num_runs root_experiments_path
                                   experiment_folder_name

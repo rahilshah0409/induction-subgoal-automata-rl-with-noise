@@ -8,7 +8,7 @@ def generate_examples(goal_examples, dend_examples, inc_examples):
     dend_examples_str, n_ids = _generate_deadend_examples(dend_examples)
     examples += dend_examples_str
     ids.extend(n_ids)
-    inc_examples_str, inc_ids = _generate_incomplete_examples(inc_examples, is_rejecting) + '\n'
+    inc_examples_str, inc_ids = _generate_incomplete_examples(inc_examples, is_rejecting)
     examples += inc_examples_str + "\n"
     ids.extend(inc_ids)
     examples += _generate_examples_injection(ids) + '\n'
@@ -41,9 +41,9 @@ def _generate_goal_examples(examples, is_rejecting):
         ids.append(id)
         weight = 0.7
         if is_rejecting:
-            example_str += "#pos(" + id + "@{}, {accept}, {reject}, {\n".format(weight)
+            example_str += "#pos(" + id + "@{}, {{accept}}, {{reject}}, {{\n".format(weight)
         else:
-            example_str += "#pos(" + id + "@{}, {accept}, {}, {\n".format(weight)
+            example_str += "#pos(" + id + "@{}, {{accept}}, {{}}, {{\n".format(weight)
         example_str += _generate_example(example)
         example_str += "}).\n\n"
     return example_str, ids
@@ -57,7 +57,7 @@ def _generate_deadend_examples(examples):
         id = "n{}".format(i)
         ids.append(id)
         weight = 0.7
-        example_str += "#pos(" + id + "@{}, {reject}, {accept}, {\n".format(weight)
+        example_str += "#pos(" + id + "@{}, {{reject}}, {{accept}}, {{\n".format(weight)
         example_str += _generate_example(example)
         example_str += "}).\n\n"
     return example_str, ids
@@ -72,9 +72,9 @@ def _generate_incomplete_examples(examples, is_rejecting):
         ids.append(id)
         weight = 0.7
         if is_rejecting:
-            example_str += "#pos(" + id + "@{}, {}, {accept, reject}, {\n".format(weight)
+            example_str += "#pos(" + id + "@{}, {{}}, {{accept, reject}}, {{\n".format(weight)
         else:
-            example_str += "#pos(" + id + "@{}, {}, {accept}, {\n".format(weight)
+            example_str += "#pos(" + id + "@{}, {{}}, {{accept}}, {{\n".format(weight)
         example_str += _generate_example(example)
         example_str += "}).\n\n"
     return example_str, ids
