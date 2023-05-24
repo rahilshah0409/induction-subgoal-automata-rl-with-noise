@@ -12,5 +12,5 @@ def generate_injected_block(stmts):
     return generate_injected_statement('\n\t' + "\n\t".join(stmts) + '\n') + '\n'
 
 
-def generate_injected_statement( stmt):
+def generate_injected_statement(stmt):
     return "#inject(\"" + stmt + "\")."

@@ -4,16 +4,24 @@ from ilasp.ilasp_common import OBS_STR, generate_injected_statement
 def generate_examples(goal_examples, dend_examples, inc_examples):
     is_rejecting = len(dend_examples) > 0  # whether the rejecting state is used
 
-    examples = _generate_goal_examples(goal_examples, is_rejecting)
-    examples += _generate_deadend_examples(dend_examples)
-    examples += _generate_incomplete_examples(inc_examples, is_rejecting) + '\n'
-    examples += _generate_examples_injection(goal_examples, dend_examples, inc_examples) + '\n'
+    examples, ids = _generate_goal_examples(goal_examples, is_rejecting)
+    dend_examples_str, n_ids = _generate_deadend_examples(dend_examples)
+    examples += dend_examples_str
+    ids.extend(n_ids)
+    inc_examples_str, inc_ids = _generate_incomplete_examples(inc_examples, is_rejecting) + '\n'
+    examples += inc_examples_str + "\n"
+    ids.extend(inc_ids)
+    examples += _generate_examples_injection(ids) + '\n'
     return examples
 
 
-def _generate_examples_injection(goal_examples, dend_examples, inc_examples):
-    num_examples = len(goal_examples) + len(dend_examples) + len(inc_examples)
-    return generate_injected_statement("example_active(0..%d)." % (num_examples - 1))
+def _generate_examples_injection(eg_ids):
+    eg_ids_str = ""
+    for i in range(len(eg_ids)):
+        eg_ids_str += eg_ids[i]
+        if i != len(eg_ids) - 1:
+            eg_ids_str += ";"
+    return generate_injected_statement("example_active(" + eg_ids_str + ").")
 
 
 def get_longest_example_length(goal_examples, dend_examples, inc_examples):
@@ -25,35 +33,51 @@ def get_longest_example_length(goal_examples, dend_examples, inc_examples):
 
 def _generate_goal_examples(examples, is_rejecting):
     example_str = ""
-    for example in examples:
+    ids = []
+    for i in range(len(examples)):
+        # (example_trace, weight) = example
+        example = examples[i]
+        id = "p{}".format(i)
+        ids.append(id)
+        weight = 0.7
         if is_rejecting:
-            example_str += "#pos({accept}, {reject}, {\n"
+            example_str += "#pos(" + id + "@{}, {accept}, {reject}, {\n".format(weight)
         else:
-            example_str += "#pos({accept}, {}, {\n"
+            example_str += "#pos(" + id + "@{}, {accept}, {}, {\n".format(weight)
         example_str += _generate_example(example)
         example_str += "}).\n\n"
-    return example_str
+    return example_str, ids
 
 
 def _generate_deadend_examples(examples):
     example_str = ""
-    for example in examples:
-        example_str += "#pos({reject}, {accept}, {\n"
+    ids = []
+    for i in range(len(examples)):
+        example = examples[i]
+        id = "n{}".format(i)
+        ids.append(id)
+        weight = 0.7
+        example_str += "#pos(" + id + "@{}, {reject}, {accept}, {\n".format(weight)
         example_str += _generate_example(example)
         example_str += "}).\n\n"
-    return example_str
+    return example_str, ids
 
 
 def _generate_incomplete_examples(examples, is_rejecting):
     example_str = ""
-    for example in examples:
+    ids = []
+    for i in range(len(examples)):
+        example = examples[i]
+        id = "i{}".format(i)
+        ids.append(id)
+        weight = 0.7
         if is_rejecting:
-            example_str += "#pos({}, {accept, reject}, {\n"
+            example_str += "#pos(" + id + "@{}, {}, {accept, reject}, {\n".format(weight)
         else:
-            example_str += "#pos({}, {accept}, {\n"
+            example_str += "#pos(" + id + "@{}, {}, {accept}, {\n".format(weight)
         example_str += _generate_example(example)
         example_str += "}).\n\n"
-    return example_str
+    return example_str, ids
 
 
 def _generate_example(example):
