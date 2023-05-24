@@ -72,7 +72,7 @@ def _set_gridworld_rl_config(config, args):
 
 
 def _set_waterworld_rl_config(config, args):
-    config["random_restart"] = True
+    config["random_restart"] = True if args.random_restart is None else args.random_restart
     config[LearningAlgorithm.DEBUG] = False
     config[LearningAlgorithm.TRAIN_MODEL] = True
     config[LearningAlgorithm.NUM_EPISODES] = 50000
@@ -204,7 +204,7 @@ def _get_argparser():
     parser.add_argument("--avoid_learning_negative_only_formulas", "-n", action="store_true", help="whether to allow learning formulas formed only by negative literals")
     parser.add_argument("--environments", nargs='+', default=None, help="list of environments of the specified domain")
     parser.add_argument("--use_velocities", default=None, help="whether to have the coloured balls frozen in the waterworld environment")
-
+    parser.add_argument("--random_restart", default=None, help="whether the WaterWorld environment restarts randomly or not")
     parser.add_argument("--use_gpu", action="store_true", help="whether to use the gpu")
     parser.add_argument("--timed", action="store_true", help="whether it is an experiment whose running time should be compared with others")
     parser.add_argument("--multitask", action="store_true", help="whether the experiments are multitask")
