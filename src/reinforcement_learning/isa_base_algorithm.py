@@ -1,8 +1,11 @@
 from abc import abstractmethod
 import numpy as np
 import os
+import pickle
+import torch
 
 from gym_subgoal_automata.utils.subgoal_automaton import SubgoalAutomaton
+from labelling_function.state_to_event_net import State2EventNet
 from reinforcement_learning.learning_algorithm import LearningAlgorithm
 from utils import utils
 from ilasp.generator.ilasp_task_generator import generate_ilasp_task
@@ -59,6 +62,11 @@ class ISAAlgorithmBase(LearningAlgorithm):
     AUTOMATON_PLOT_FILENAME = "plot-%d.png"            # filename pattern of the graphical solutions to automaton learning tasks
 
     AUTOMATON_LEARNING_EPISODES_FILENAME = "automaton_learning_episodes.txt"  # filename of the file containing the episodes where an automaton has been learned
+
+    DYNAMIC_ENV_INPUT_VEC_SIZE = 52
+    DYNAMIC_ENV_OUTPUT_VEC_SIZE = 21
+    FROZEN_ENV_INPUT_VEC_SIZE = 28
+    FROZEN_ENV_OUTPUT_VEC_SIZE = 6
 
     def __init__(self, tasks, num_tasks, export_folder_names, params, target_automata, binary_folder_name):
         super().__init__(tasks, num_tasks, export_folder_names, params)
@@ -134,6 +142,9 @@ class ISAAlgorithmBase(LearningAlgorithm):
     def _run_episode(self, domain_id, task_id):
         task = self._get_task(domain_id, task_id)  # get the task to learn
 
+        # Initalise labelling function model and other valuable metadata about said model
+        labelling_function, model_metrics, events_captured = self._initialise_labelling_function_and_metadata(task)
+
         # initialize reward and steps counters, histories and reset the task to its initial state
         total_reward, episode_length = 0, 0
         observation_history, compressed_observation_history = [], []
@@ -141,7 +152,8 @@ class ISAAlgorithmBase(LearningAlgorithm):
 
         # get initial observations and initialise histories
         # The initial observations will be gathered from the model (and probably would need to be converted to a relevant form)
-        initial_observations = self._get_task_observations(task)
+        # initial_observations = self._get_task_observations_from_env(task)
+        initial_observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, current_state)
         self._update_histories(observation_history, compressed_observation_history, initial_observations)
 
         # get actual initial automaton state (performs verification that there is only one possible initial state!)
@@ -164,7 +176,8 @@ class ISAAlgorithmBase(LearningAlgorithm):
             current_automaton_state_id = automaton.get_state_id(current_automaton_state)
             action = self._choose_action(domain_id, task_id, current_state, automaton, current_automaton_state_id)
             next_state, reward, is_terminal, _ = task.step(action)
-            observations = self._get_task_observations(task)
+            observations = self._get_task_observations_from_model(task, next_state)
+            # observations = self._get_task_observations_from_env(task)
 
             # whether observations have changed or not is important for QRM when using compressed traces
             observations_changed = self._update_histories(observation_history, compressed_observation_history, observations)
@@ -197,6 +210,38 @@ class ISAAlgorithmBase(LearningAlgorithm):
 
         return completed_episode, total_reward, episode_length, task.is_terminal(), observation_history, compressed_observation_history
 
+    def _initialise_labelling_function_and_metadata(self, task):
+        model_sub_dir = ""
+        input_vec_size = 0
+        output_vec_size = 0
+        if task.use_velocities:
+            model_sub_dir = "dynamic/"
+            input_vec_size = ISAAlgorithmBase.DYNAMIC_ENV_INPUT_VEC_SIZE
+            output_vec_size = ISAAlgorithmBase.DYNAMIC_ENV_OUTPUT_VEC_SIZE
+        else:
+            model_sub_dir = "frozen/"
+            input_vec_size = ISAAlgorithmBase.FROZEN_ENV_INPUT_VEC_SIZE
+            output_vec_size = ISAAlgorithmBase.FROZEN_ENV_OUTPUT_VEC_SIZE
+        num_layers = 6
+        num_neurons = 64
+        labelling_function = State2EventNet(input_vec_size, output_vec_size, num_layers, num_neurons)
+
+        main_dir = "../labelling_function/"
+        model_dir = main_dir + model_sub_dir
+        model_loc = model_dir + "final_model.pth"
+        model_metrics_loc = model_dir + "final_model_metrics.pkl"
+        events_captured_loc = main_dir + "events_captured.pkl"
+
+        labelling_function.load_state_dict(torch.load(model_loc))
+        with open(model_metrics_loc, "rb") as f:
+            model_metrics = pickle.load(f)
+        events_captured_loc = "labelling_function/events_captured.pkl"
+        with open(events_captured_loc, "rb") as g:
+            events_captured = pickle.load(g)
+        events_captured_filtered = sorted(list(filter(lambda pair: pair[0] == "black" or pair[1] == "black", events_captured)))
+
+        return labelling_function, model_metrics, events_captured_filtered
+    
     def _on_episode_change(self, previous_episode):
         if self.use_max_episode_length_annealing:
             episode_length_increase = previous_episode * self.max_episode_length_increase_rate
@@ -248,14 +293,46 @@ class ISAAlgorithmBase(LearningAlgorithm):
     '''
     Task Management Methods (getting observations)
     '''
-    # This will need to change to use my model?
-    def _get_task_observations(self, task):
-        # Use model here
+
+    def _get_task_observations_from_env(self, task):
         observations = task.get_observations()
         if self.use_restricted_observables:
             return observations.intersection(task.get_restricted_observables())
         return observations
-
+    
+    def _get_task_observations_from_model(self, task, labelling_function, model_metrics, events_captured, state):
+        # Get observations from model
+        event_vector = labelling_function(state)
+        observations_neatened = self._neaten_observations(event_vector, events_captured, model_metrics)
+        if self.use_restricted_observables:
+            return observations_neatened.intersection(task.get_restricted_observables())
+        return observations_neatened
+    
+    def _neaten_observations(self, event_vector, events_captured, model_metrics):
+        events = set()
+        for i in range(len(event_vector)):
+            if event_vector[i] > 0.5:
+                events.add(self._convert_event(events_captured[i], model_metrics))
+        # Need an indication of no event being observed instead of an empty set because 
+        if not events:
+            events.add(("_", model_metrics["precision"]["no_event"]))
+        return events
+    
+    def _convert_event(event, model_metrics):
+        precision = model_metrics["precision"][event]
+        if event == ('black', 'blue'):
+            return ("b", precision)
+        elif event == ('black', 'lime'):
+            return ("g", precision)
+        elif event == ('black', 'red'):
+            return ("r", precision)
+        elif event == ('black', 'cyan'):
+            return ("c", precision)
+        elif event == ('black', 'magenta'):
+            return ("m", precision)
+        elif event == ('black', 'yellow'):
+            return ("y", precision)
+    
     '''
     Automata Management Methods (setters, getters, associated rewards)
     '''
@@ -428,6 +505,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
 
         ilasp_task_filename = ISAAlgorithmBase.AUTOMATON_TASK_FILENAME % self.automaton_counters[domain_id]
 
+        # Do the events here also need to be recovered from the labelling function model and not the environment?
         observables = task.get_observables()
         if self.use_restricted_observables:
             observables = task.get_restricted_observables()
