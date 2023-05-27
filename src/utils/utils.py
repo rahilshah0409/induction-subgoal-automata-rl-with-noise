@@ -47,6 +47,10 @@ def sort_by_ord(input_list):
     input_list.sort(key=lambda s: ord(s.lower()))
 
 
+def pair_sort_by_ord(input_list):
+    input_list.sort(key=lambda s: ord(s[0].lower()))
+
+
 def randargmax(input_vector):
     return np.random.choice(np.flatnonzero(input_vector == np.max(input_vector)))
 

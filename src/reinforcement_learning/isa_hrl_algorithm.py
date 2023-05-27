@@ -327,6 +327,7 @@ class ISAAlgorithmHRL(ISAAlgorithmBase):
     def _get_greedy_option_deep(self, domain_id, task_id, current_state, automaton, current_automaton_state):
         meta_q_function = self.meta_q_functions[domain_id][task_id]
         state_v = self._get_state_and_automaton_state_vector(current_state, automaton, current_automaton_state)
+        print(state_v)
         state_v = torch.tensor(state_v).to(self.device)
         q_values = meta_q_function(state_v)
         task = self._get_task(domain_id, task_id)

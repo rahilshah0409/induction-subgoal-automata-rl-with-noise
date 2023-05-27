@@ -4,6 +4,7 @@ import os
 import pickle
 import torch
 
+from torch.autograd import Variable
 from gym_subgoal_automata.utils.subgoal_automaton import SubgoalAutomaton
 from labelling_function.state_to_event_net import State2EventNet
 from reinforcement_learning.learning_algorithm import LearningAlgorithm
@@ -152,8 +153,8 @@ class ISAAlgorithmBase(LearningAlgorithm):
 
         # get initial observations and initialise histories
         # The initial observations will be gathered from the model (and probably would need to be converted to a relevant form)
-        # initial_observations = self._get_task_observations_from_env(task)
-        initial_observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, current_state)
+        initial_observations = self._get_task_observations_from_env(task)
+        # initial_observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, current_state)
         self._update_histories(observation_history, compressed_observation_history, initial_observations)
 
         # get actual initial automaton state (performs verification that there is only one possible initial state!)
@@ -176,8 +177,8 @@ class ISAAlgorithmBase(LearningAlgorithm):
             current_automaton_state_id = automaton.get_state_id(current_automaton_state)
             action = self._choose_action(domain_id, task_id, current_state, automaton, current_automaton_state_id)
             next_state, reward, is_terminal, _ = task.step(action)
-            observations = self._get_task_observations_from_model(task, next_state)
-            # observations = self._get_task_observations_from_env(task)
+            # observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, next_state)
+            observations = self._get_task_observations_from_env(task)
 
             # whether observations have changed or not is important for QRM when using compressed traces
             observations_changed = self._update_histories(observation_history, compressed_observation_history, observations)
@@ -226,13 +227,13 @@ class ISAAlgorithmBase(LearningAlgorithm):
         num_neurons = 64
         labelling_function = State2EventNet(input_vec_size, output_vec_size, num_layers, num_neurons)
 
-        main_dir = "../labelling_function/"
+        main_dir = "labelling_function/"
         model_dir = main_dir + model_sub_dir
         model_loc = model_dir + "final_model.pth"
         model_metrics_loc = model_dir + "final_model_metrics.pkl"
         events_captured_loc = main_dir + "events_captured.pkl"
 
-        labelling_function.load_state_dict(torch.load(model_loc))
+        labelling_function.load_state_dict(torch.load(model_loc, map_location=torch.device('cpu')))
         with open(model_metrics_loc, "rb") as f:
             model_metrics = pickle.load(f)
         events_captured_loc = "labelling_function/events_captured.pkl"
@@ -302,7 +303,8 @@ class ISAAlgorithmBase(LearningAlgorithm):
     
     def _get_task_observations_from_model(self, task, labelling_function, model_metrics, events_captured, state):
         # Get observations from model
-        event_vector = labelling_function(state)
+        state_tensor = Variable(torch.FloatTensor(state))
+        event_vector = labelling_function(state_tensor)
         observations_neatened = self._neaten_observations(event_vector, events_captured, model_metrics)
         if self.use_restricted_observables:
             return observations_neatened.intersection(task.get_restricted_observables())
@@ -312,13 +314,15 @@ class ISAAlgorithmBase(LearningAlgorithm):
         events = set()
         for i in range(len(event_vector)):
             if event_vector[i] > 0.5:
-                events.add(self._convert_event(events_captured[i], model_metrics))
+                print(events_captured[i])
+                event_with_precision = self._convert_event(events_captured[i], model_metrics)
+                events.add(event_with_precision)
         # Need an indication of no event being observed instead of an empty set because 
         if not events:
             events.add(("_", model_metrics["precision"]["no_event"]))
         return events
     
-    def _convert_event(event, model_metrics):
+    def _convert_event(self, event, model_metrics):
         precision = model_metrics["precision"][event]
         if event == ('black', 'blue'):
             return ("b", precision)
