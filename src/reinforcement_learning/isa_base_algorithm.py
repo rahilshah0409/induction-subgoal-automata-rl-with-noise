@@ -151,10 +151,9 @@ class ISAAlgorithmBase(LearningAlgorithm):
         observation_history, compressed_observation_history = [], []
         current_state = task.reset()
 
-        # get initial observations and initialise histories
-        # The initial observations will be gathered from the model (and probably would need to be converted to a relevant form)
-        initial_observations = self._get_task_observations_from_env(task)
-        # initial_observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, current_state)
+        # get initial observations from the labelling function model and initialise histories
+        # initial_observations = self._get_task_observations_from_env(task)
+        initial_observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, current_state)
         self._update_histories(observation_history, compressed_observation_history, initial_observations)
 
         # get actual initial automaton state (performs verification that there is only one possible initial state!)
@@ -177,8 +176,8 @@ class ISAAlgorithmBase(LearningAlgorithm):
             current_automaton_state_id = automaton.get_state_id(current_automaton_state)
             action = self._choose_action(domain_id, task_id, current_state, automaton, current_automaton_state_id)
             next_state, reward, is_terminal, _ = task.step(action)
-            # observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, next_state)
-            observations = self._get_task_observations_from_env(task)
+            # observations = self._get_task_observations_from_env(task)
+            observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, next_state)
 
             # whether observations have changed or not is important for QRM when using compressed traces
             observations_changed = self._update_histories(observation_history, compressed_observation_history, observations)
@@ -231,12 +230,11 @@ class ISAAlgorithmBase(LearningAlgorithm):
         model_dir = main_dir + model_sub_dir
         model_loc = model_dir + "final_model.pth"
         model_metrics_loc = model_dir + "final_model_metrics.pkl"
-        events_captured_loc = main_dir + "events_captured.pkl"
+        events_captured_loc = model_dir + "events_captured.pkl"
 
         labelling_function.load_state_dict(torch.load(model_loc, map_location=torch.device('cpu')))
         with open(model_metrics_loc, "rb") as f:
             model_metrics = pickle.load(f)
-        events_captured_loc = "labelling_function/events_captured.pkl"
         with open(events_captured_loc, "rb") as g:
             events_captured = pickle.load(g)
         events_captured_filtered = sorted(list(filter(lambda pair: pair[0] == "black" or pair[1] == "black", events_captured)))
@@ -302,40 +300,43 @@ class ISAAlgorithmBase(LearningAlgorithm):
         return observations
     
     def _get_task_observations_from_model(self, task, labelling_function, model_metrics, events_captured, state):
-        # Get observations from model
         state_tensor = Variable(torch.FloatTensor(state))
         event_vector = labelling_function(state_tensor)
-        observations_neatened = self._neaten_observations(event_vector, events_captured, model_metrics)
+        obs_confidence_pair = self._neaten_observations(event_vector, events_captured, model_metrics)
+        # This if statement needs to be changed but I don't know how
         if self.use_restricted_observables:
-            return observations_neatened.intersection(task.get_restricted_observables())
-        return observations_neatened
+            return obs_confidence_pair.intersection(task.get_restricted_observables())
+        return obs_confidence_pair
     
     def _neaten_observations(self, event_vector, events_captured, model_metrics):
         events = set()
+        precision_scores = []
         for i in range(len(event_vector)):
             if event_vector[i] > 0.5:
-                print(events_captured[i])
-                event_with_precision = self._convert_event(events_captured[i], model_metrics)
-                events.add(event_with_precision)
-        # Need an indication of no event being observed instead of an empty set because 
+                event, precision = self._convert_event(events_captured[i], model_metrics)
+                events.add(event)
+                precision_scores.append(precision)
+        # Need an indication of no event being observed instead of an empty set because the model will be uncertain about observing no event too
         if not events:
-            events.add(("_", model_metrics["precision"]["no_event"]))
-        return events
+            return (events, model_metrics["precision"]["no_event"])
+        else:
+            min_precision = min(precision_scores)
+            return (events, min_precision)
     
     def _convert_event(self, event, model_metrics):
         precision = model_metrics["precision"][event]
         if event == ('black', 'blue'):
-            return ("b", precision)
+            return "b", precision
         elif event == ('black', 'lime'):
-            return ("g", precision)
+            return "g", precision
         elif event == ('black', 'red'):
-            return ("r", precision)
+            return "r", precision
         elif event == ('black', 'cyan'):
-            return ("c", precision)
+            return "c", precision
         elif event == ('black', 'magenta'):
-            return ("m", precision)
+            return "m", precision
         elif event == ('black', 'yellow'):
-            return ("y", precision)
+            return "y", precision
     
     '''
     Automata Management Methods (setters, getters, associated rewards)
@@ -439,16 +440,22 @@ class ISAAlgorithmBase(LearningAlgorithm):
         if task.is_terminal():
             if task.is_goal_achieved():
                 if current_automaton_state is None or not automaton.is_accept_state(current_automaton_state):
+                    print("We have observed a positive counterexample!")
+                    print(observation_history)
                     self._update_example_set(self.goal_examples[domain_id], observation_history, compressed_observation_history)
                     return True
             else:
                 if current_automaton_state is None or not automaton.is_reject_state(current_automaton_state):
+                    print("We have observed a negative counterexample!")
+                    print(observation_history)
                     self._update_example_set(self.dend_examples[domain_id], observation_history, compressed_observation_history)
                     return True
         else:
             # just update incomplete examples if at least we have one goal or one deadend example (avoid overflowing the
             # set of incomplete unnecessarily)
             if current_automaton_state is None or automaton.is_terminal_state(current_automaton_state):
+                print("We have observed an incomplete counterexample!")
+                print(observation_history)
                 self._update_example_set(self.inc_examples[domain_id], observation_history, compressed_observation_history)
                 return True
         return False  # whether example sets have been updated
@@ -457,25 +464,31 @@ class ISAAlgorithmBase(LearningAlgorithm):
     def _update_example_set(self, example_set, observation_history, compressed_observation_history):
         """Updates the a given example set with the corresponding history of observations depending on whether
         compressed traces are used or not to learn the automata. An exception is thrown if a trace is readded."""
-        if self.use_compressed_traces:
-            history_tuple = tuple(compressed_observation_history)
-        else:
-            history_tuple = tuple(observation_history)
+        history_to_use = compressed_observation_history if self.use_compressed_traces else observation_history
+        event_trace, confidence_scores = zip(*history_to_use)
+        history_tuple = tuple(event_trace)
+        print(history_tuple)
+        # if self.use_compressed_traces:
+        #     history_tuple = tuple(compressed_observation_history)
+        # else:
+        #     history_tuple = tuple(observation_history)
 
         if history_tuple not in example_set:
-            example_set.add(history_tuple)
+            example_set.add((history_tuple, confidence_scores))
         else:
             raise RuntimeError("An example that an automaton is currently covered cannot be uncovered afterwards!")
 
     def _update_automaton(self, task, domain_id):
         self.automaton_counters[domain_id] += 1  # increment the counter of the number of aut. learnt for a domain
 
+        print("We now need to generate an ILASP task to find the minimal automaton")
         self._generate_ilasp_task(task, domain_id)  # generate the automata learning task
 
         solver_success = self._solve_ilasp_task(domain_id)  # run the task solver
         if solver_success:
             ilasp_solution_filename = os.path.join(self.get_automaton_solution_folder(domain_id),
                                                    ISAAlgorithmBase.AUTOMATON_SOLUTION_FILENAME % self.automaton_counters[domain_id])
+            print("Where the ILASP solution should be: " + ilasp_solution_filename)
             candidate_automaton = self._parse_ilasp_solutions(ilasp_solution_filename)
 
             if candidate_automaton.get_num_states() > 0:
@@ -493,18 +506,20 @@ class ISAAlgorithmBase(LearningAlgorithm):
             else:
                 # if the task is UNSATISFIABLE, it means the number of states is not enough to cover the examples, so
                 # the number of states is incremented by 1 and try again
+                print("The task is unsatisfiable with {} state".format(self.num_automaton_states[domain_id]))
                 self.num_automaton_states[domain_id] += 1
 
                 if self.debug:
                     print("The number of states in the automaton has been increased to " + str(self.num_automaton_states[domain_id]))
                     print("Updating automaton...")
-
-                self._update_automaton(task, domain_id)
+                raise RuntimeError("You haven't managed to produce an automaton!")
+                # self._update_automaton(task, domain_id)
         else:
             raise RuntimeError("Error: Couldn't find an automaton under the specified timeout!")
 
     # Somewhere in this generation of the ILASP task I need to pass in the fact that the goal, dend and inc examples have weights attached to them?
     def _generate_ilasp_task(self, task, domain_id):
+        print(self.get_automaton_task_folder(domain_id))
         utils.mkdir(self.get_automaton_task_folder(domain_id))
 
         ilasp_task_filename = ISAAlgorithmBase.AUTOMATON_TASK_FILENAME % self.automaton_counters[domain_id]

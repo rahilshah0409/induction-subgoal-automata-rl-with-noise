@@ -1,4 +1,5 @@
 from ilasp.ilasp_common import OBS_STR, generate_injected_statement
+import math
 
 
 def generate_examples(goal_examples, dend_examples, inc_examples):
@@ -25,9 +26,29 @@ def _generate_examples_injection(eg_ids):
 
 
 def get_longest_example_length(goal_examples, dend_examples, inc_examples):
-    max_goal = len(max(goal_examples, key=len)) if len(goal_examples) > 0 else 0
-    max_dend = len(max(dend_examples, key=len)) if len(dend_examples) > 0 else 0
-    max_inc = len(max(inc_examples, key=len)) if len(inc_examples) > 0 else 0
+    # goal_traces, _ = zip(*goal_examples)
+    # dend_traces, _ = zip(*dend_examples)
+    # inc_traces, _ = zip(*inc_examples)
+    
+    # max_goal = len(max(goal_traces, key=len)) if len(goal_traces) > 0 else 0
+    # max_dend = len(max(dend_traces, key=len)) if len(dend_traces) > 0 else 0
+    # max_inc = len(max(inc_traces, key=len)) if len(inc_traces) > 0 else 0
+
+    max_goal = 0
+    if len(goal_examples) > 0:
+        goal_traces, _ = zip(*goal_examples)
+        max_goal = len(max(goal_traces, key=len))
+
+    max_dend = 0
+    if len(dend_examples) > 0:
+        dend_traces, _ = zip(*dend_examples)
+        max_dend = len(max(dend_traces, key=len))
+
+    max_inc = 0
+    if len(inc_examples) > 0:
+        inc_traces, _ = zip(*inc_examples)
+        max_inc = len(max(inc_traces, key=len))
+
     return max(max_goal, max_dend, max_inc)
 
 
@@ -35,16 +56,15 @@ def _generate_goal_examples(examples, is_rejecting):
     example_str = ""
     ids = []
     for i in range(len(examples)):
-        # (example_trace, weight) = example
-        example = examples[i]
+        (trace_tuple, confidence_scores) = examples[i]
         id = "p{}".format(i)
         ids.append(id)
-        weight = 7
+        weight = math.ceil(min(confidence_scores) * 100)
         if is_rejecting:
             example_str += "#pos(" + id + "@{}, {{accept}}, {{reject}}, {{\n".format(weight)
         else:
             example_str += "#pos(" + id + "@{}, {{accept}}, {{}}, {{\n".format(weight)
-        example_str += _generate_example(example)
+        example_str += _generate_example(trace_tuple)
         example_str += "}).\n\n"
     return example_str, ids
 
@@ -53,12 +73,12 @@ def _generate_deadend_examples(examples):
     example_str = ""
     ids = []
     for i in range(len(examples)):
-        example = examples[i]
+        (trace_tuple, confidence_scores) = examples[i]
         id = "n{}".format(i)
         ids.append(id)
-        weight = 7
+        weight = math.ceil(min(confidence_scores) * 100)
         example_str += "#pos(" + id + "@{}, {{reject}}, {{accept}}, {{\n".format(weight)
-        example_str += _generate_example(example)
+        example_str += _generate_example(trace_tuple)
         example_str += "}).\n\n"
     return example_str, ids
 
@@ -67,15 +87,15 @@ def _generate_incomplete_examples(examples, is_rejecting):
     example_str = ""
     ids = []
     for i in range(len(examples)):
-        example = examples[i]
+        (trace_tuple, confidence_scores) = examples[i]
         id = "i{}".format(i)
         ids.append(id)
-        weight = 7
+        weight = math.ceil(min(confidence_scores) * 100)
         if is_rejecting:
             example_str += "#pos(" + id + "@{}, {{}}, {{accept, reject}}, {{\n".format(weight)
         else:
             example_str += "#pos(" + id + "@{}, {{}}, {{accept}}, {{\n".format(weight)
-        example_str += _generate_example(example)
+        example_str += _generate_example(trace_tuple)
         example_str += "}).\n\n"
     return example_str, ids
 

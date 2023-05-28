@@ -187,9 +187,9 @@ class ISAAlgorithmQRM(ISAAlgorithmBase):
     def _update_deep_q_functions(self, task_id, experience_batch):
         states, actions, next_states, is_terminal, observations, observations_changed = zip(*experience_batch)
 
-        states_v = torch.tensor(states).to(self.device)
+        states_v = torch.tensor(states).float().to(self.device)
         actions_v = torch.tensor(actions, dtype=torch.long).to(self.device)
-        next_states_v = torch.tensor(next_states).to(self.device)
+        next_states_v = torch.tensor(next_states).float().to(self.device)
 
         for domain_id in range(self.num_domains):
             automaton = self._get_automaton(domain_id)

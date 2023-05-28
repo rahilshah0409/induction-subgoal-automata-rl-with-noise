@@ -221,7 +221,7 @@ class LearningAlgorithm(ABC):
             q_values = [q_table[(state, action)] for action in range(task.action_space.n)]
             return utils.randargmax(q_values)
         else:
-            state_v = torch.tensor(state).to(self.device)
+            state_v = torch.tensor(state).float().to(self.device)
             q_values = q_table(state_v)
             return utils.randargmax(q_values.detach().cpu().numpy())
 
@@ -233,16 +233,22 @@ class LearningAlgorithm(ABC):
     '''
     def _get_observations_as_ordered_tuple(self, observation_set):
         observations_list = list(observation_set)
-        utils.sort_by_ord(observations_list)
+        utils.pair_sort_by_ord(observations_list)
         return tuple(observations_list)
 
     def _update_histories(self, observation_history, compressed_observation_history, observations):
         # update histories only if the observation is non-empty
+        # print("updating the history here")
         if self.ignore_empty_observations and len(observations) == 0:
             return False
 
-        observations_tuple = self._get_observations_as_ordered_tuple(observations)
-        observation_history.append(observations_tuple)
+        events_set, confidence = observations
+
+        observations_tuple = self._get_observations_as_ordered_tuple(events_set)
+        # print(events_set)
+        # print(observations_tuple)
+        observation_history.append((observations_tuple, confidence))
+        # print(observation_history)
 
         observations_changed = len(compressed_observation_history) == 0 or observations_tuple != compressed_observation_history[-1]
         if observations_changed:
