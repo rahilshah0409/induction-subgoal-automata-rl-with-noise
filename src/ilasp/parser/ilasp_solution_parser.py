@@ -5,15 +5,11 @@ from ilasp.parser.ilasp_parser_utils import parse_edge_rule, parse_negative_tran
 
 def parse_ilasp_solutions(ilasp_learnt_filename):
     with open(ilasp_learnt_filename) as f:
-        print(f.read())
+        print(ilasp_learnt_filename)
         automaton = SubgoalAutomaton()
         edges = {}
-        lines = f.readlines()
-        print(len(lines))
         for line in f:
             line = line.strip()
-            print("Line")
-            print(line)
             if line.startswith(N_TRANSITION_STR):
                 parsed_transition = parse_negative_transition_rule(line)
                 current_edge = ((parsed_transition.src, parsed_transition.dst), parsed_transition.edge)
@@ -24,7 +20,6 @@ def parse_ilasp_solutions(ilasp_learnt_filename):
                 for neg_fluent in parsed_transition.neg:
                     edges[current_edge].append(neg_fluent)
             elif line.startswith(CONNECTED_STR):
-                print("We have found an edge stmt")
                 parsed_edge = parse_edge_rule(line)
                 current_edge = ((parsed_edge.src, parsed_edge.dst), parsed_edge.edge)
                 if current_edge not in edges:

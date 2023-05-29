@@ -164,7 +164,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
             updated_automaton = self._perform_interleaved_automaton_learning(task, domain_id,
                                                                              current_automaton_state,
                                                                              observation_history,
-                                                                             compressed_observation_history)
+                                                                             compressed_observation_history, events_captured)
             if updated_automaton:  # get the actual initial state as done before
                 current_automaton_state = self._get_initial_automaton_state_successors(domain_id, initial_observations)
 
@@ -192,7 +192,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
             if not interrupt_episode and self.interleaved_automaton_learning and self._can_learn_new_automaton(domain_id, task):
                 interrupt_episode = self._perform_interleaved_automaton_learning(task, domain_id, next_automaton_state,
                                                                                  observation_history,
-                                                                                 compressed_observation_history)
+                                                                                 compressed_observation_history, events_captured)
 
             if not interrupt_episode:
                 automaton = self.automata[domain_id]
@@ -302,13 +302,15 @@ class ISAAlgorithmBase(LearningAlgorithm):
     def _get_task_observations_from_model(self, task, labelling_function, model_metrics, events_captured, state):
         state_tensor = Variable(torch.FloatTensor(state))
         event_vector = labelling_function(state_tensor)
-        obs_confidence_pair = self._neaten_observations(event_vector, events_captured, model_metrics)
-        # This if statement needs to be changed but I don't know how
+        (event_set, confidence)= self._vector_to_event_with_confidence(event_vector, events_captured, model_metrics)
+        # How does restricted_events become the events that we care about for the task at hand without making any major assumptions
+        # The confidence score will be affected if we filter out some events when restricted observables are used
+        restricted_events = set(filter(self._neaten_event, events_captured))
         if self.use_restricted_observables:
-            return obs_confidence_pair.intersection(task.get_restricted_observables())
-        return obs_confidence_pair
+            return (event_set.intersection(restricted_events), confidence)
+        return (event_set, confidence)
     
-    def _neaten_observations(self, event_vector, events_captured, model_metrics):
+    def _vector_to_event_with_confidence(self, event_vector, events_captured, model_metrics):
         events = set()
         precision_scores = []
         for i in range(len(event_vector)):
@@ -324,19 +326,26 @@ class ISAAlgorithmBase(LearningAlgorithm):
             return (events, min_precision)
     
     def _convert_event(self, event, model_metrics):
+        shortened_event_name = self._neaten_event(event)
         precision = model_metrics["precision"][event]
-        if event == ('black', 'blue'):
-            return "b", precision
-        elif event == ('black', 'lime'):
-            return "g", precision
-        elif event == ('black', 'red'):
-            return "r", precision
-        elif event == ('black', 'cyan'):
-            return "c", precision
-        elif event == ('black', 'magenta'):
-            return "m", precision
-        elif event == ('black', 'yellow'):
-            return "y", precision
+        return shortened_event_name, precision
+        # precision = model_metrics["precision"][event]
+        # if event == ('black', 'blue'):
+        #     return "b", precision
+        # elif event == ('black', 'lime'):
+        #     return "g", precision
+        # elif event == ('black', 'red'):
+        #     return "r", precision
+        # elif event == ('black', 'cyan'):
+        #     return "c", precision
+        # elif event == ('black', 'magenta'):
+        #     return "m", precision
+        # elif event == ('black', 'yellow'):
+        #     return "y", precision
+
+
+    def _neaten_event(self, event):
+        return str(event[0][0]) + str(event[1][0])    
     
     '''
     Automata Management Methods (setters, getters, associated rewards)
@@ -409,7 +418,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
         pass
 
     def _perform_interleaved_automaton_learning(self, task, domain_id, current_automaton_state, observation_history,
-                                                compressed_observation_history):
+                                                compressed_observation_history, events_captured):
         """Updates the set of examples based on the current observed trace. In case the set of example is updated, it
         makes a call to the automata learner. Returns True if a new automaton has been learnt, False otherwise."""
         updated_examples = self._update_examples(task, domain_id, current_automaton_state, observation_history,
@@ -421,7 +430,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
                 else:
                     counterexample = str(observation_history)
                 print("Updating automaton " + str(domain_id) + "... The counterexample is: " + counterexample)
-            self._update_automaton(task, domain_id)
+            self._update_automaton(task, domain_id, events_captured)
             return True  # whether a new automaton has been learnt
 
         return False
@@ -478,17 +487,15 @@ class ISAAlgorithmBase(LearningAlgorithm):
         else:
             raise RuntimeError("An example that an automaton is currently covered cannot be uncovered afterwards!")
 
-    def _update_automaton(self, task, domain_id):
+    def _update_automaton(self, task, domain_id, events_captured):
         self.automaton_counters[domain_id] += 1  # increment the counter of the number of aut. learnt for a domain
 
-        print("We now need to generate an ILASP task to find the minimal automaton")
-        self._generate_ilasp_task(task, domain_id)  # generate the automata learning task
+        self._generate_ilasp_task(task, domain_id, events_captured)  # generate the automata learning task
 
         solver_success = self._solve_ilasp_task(domain_id)  # run the task solver
         if solver_success:
             ilasp_solution_filename = os.path.join(self.get_automaton_solution_folder(domain_id),
                                                    ISAAlgorithmBase.AUTOMATON_SOLUTION_FILENAME % self.automaton_counters[domain_id])
-            print("Where the ILASP solution should be: " + ilasp_solution_filename)
             candidate_automaton = self._parse_ilasp_solutions(ilasp_solution_filename)
 
             if candidate_automaton.get_num_states() > 0:
@@ -506,7 +513,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
             else:
                 # if the task is UNSATISFIABLE, it means the number of states is not enough to cover the examples, so
                 # the number of states is incremented by 1 and try again
-                print("The task is unsatisfiable with {} state".format(self.num_automaton_states[domain_id]))
+                print("The task is unsatisfiable with {} states".format(self.num_automaton_states[domain_id]))
                 self.num_automaton_states[domain_id] += 1
 
                 if self.debug:
@@ -518,16 +525,19 @@ class ISAAlgorithmBase(LearningAlgorithm):
             raise RuntimeError("Error: Couldn't find an automaton under the specified timeout!")
 
     # Somewhere in this generation of the ILASP task I need to pass in the fact that the goal, dend and inc examples have weights attached to them?
-    def _generate_ilasp_task(self, task, domain_id):
+    def _generate_ilasp_task(self, task, domain_id, events_captured):
         print(self.get_automaton_task_folder(domain_id))
         utils.mkdir(self.get_automaton_task_folder(domain_id))
 
         ilasp_task_filename = ISAAlgorithmBase.AUTOMATON_TASK_FILENAME % self.automaton_counters[domain_id]
 
         # Do the events here also need to be recovered from the labelling function model and not the environment?
-        observables = task.get_observables()
-        if self.use_restricted_observables:
-            observables = task.get_restricted_observables()
+        # observables = task.get_observables()
+        # if self.use_restricted_observables:
+        #     observables = task.get_restricted_observables()
+
+        observables = set(map(self._neaten_event, events_captured))
+        print(observables)
 
         # the sets of examples are sorted to make sure that ILASP produces the same solution for the same sets (ILASP
         # can produce different hypothesis for the same set of examples but given in different order)
