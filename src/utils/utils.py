@@ -67,9 +67,9 @@ def write_json_obj(obj, filepath):
         json.dump(obj, f)
 
 
-def min_t_norm_operator(self, scores):
+def min_t_norm_operator(scores):
     return min(scores)
     
 
-def product_t_norm_operator(self, scores):
+def product_t_norm_operator(scores):
     return reduce(mul, scores)
