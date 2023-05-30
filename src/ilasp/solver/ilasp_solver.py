@@ -44,5 +44,5 @@ def solve_ilasp_task(ilasp_problem_filename, output_filename, version="2", max_b
             arguments.append("-s")
 
         return_code = subprocess.call(arguments, stdout=f)
-        print(return_code)
+        # print(return_code)
         return return_code != TIMEOUT_ERROR_CODE

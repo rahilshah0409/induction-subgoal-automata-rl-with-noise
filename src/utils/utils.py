@@ -2,6 +2,8 @@ import os
 import shutil
 import numpy as np
 import json
+from functools import reduce
+from operator import mul
 
 
 def get_param(param_dict, param_name, default_value=None):
@@ -64,3 +66,10 @@ def write_json_obj(obj, filepath):
     with open(filepath, 'w') as f:
         json.dump(obj, f)
 
+
+def min_t_norm_operator(self, scores):
+    return min(scores)
+    
+
+def product_t_norm_operator(self, scores):
+    return reduce(mul, scores)

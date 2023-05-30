@@ -19,7 +19,7 @@ def generate_ilasp_task(num_states, accepting_state, rejecting_state, observable
                                         dend_examples, inc_examples, output_folder, symmetry_breaking_method,
                                         max_disj_size, learn_acyclic, use_compressed_traces, avoid_learning_only_negative,
                                         prioritize_optimal_solutions, binary_folder_name)
-        print(task)
+        # print(task)
         f.write(task)
 
 

@@ -5,7 +5,7 @@ from ilasp.parser.ilasp_parser_utils import parse_edge_rule, parse_negative_tran
 
 def parse_ilasp_solutions(ilasp_learnt_filename):
     with open(ilasp_learnt_filename) as f:
-        print(ilasp_learnt_filename)
+        # print(ilasp_learnt_filename)
         automaton = SubgoalAutomaton()
         edges = {}
         for line in f:

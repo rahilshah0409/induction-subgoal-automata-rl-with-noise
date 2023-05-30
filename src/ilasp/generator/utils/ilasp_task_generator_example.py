@@ -1,5 +1,6 @@
 from ilasp.ilasp_common import OBS_STR, generate_injected_statement
 import math
+from utils import utils
 
 
 def generate_examples(goal_examples, dend_examples, inc_examples):
@@ -59,7 +60,7 @@ def _generate_goal_examples(examples, is_rejecting):
         (trace_tuple, confidence_scores) = examples[i]
         id = "p{}".format(i)
         ids.append(id)
-        weight = math.ceil(min(confidence_scores) * 100)
+        weight = math.ceil(utils.min_t_norm_operator(confidence_scores) * 100)
         if is_rejecting:
             example_str += "#pos(" + id + "@{}, {{accept}}, {{reject}}, {{\n".format(weight)
         else:
@@ -76,7 +77,7 @@ def _generate_deadend_examples(examples):
         (trace_tuple, confidence_scores) = examples[i]
         id = "n{}".format(i)
         ids.append(id)
-        weight = math.ceil(min(confidence_scores) * 100)
+        weight = math.ceil(utils.min_t_norm_operator(confidence_scores) * 100)
         example_str += "#pos(" + id + "@{}, {{reject}}, {{accept}}, {{\n".format(weight)
         example_str += _generate_example(trace_tuple)
         example_str += "}).\n\n"
@@ -90,7 +91,7 @@ def _generate_incomplete_examples(examples, is_rejecting):
         (trace_tuple, confidence_scores) = examples[i]
         id = "i{}".format(i)
         ids.append(id)
-        weight = math.ceil(min(confidence_scores) * 100)
+        weight = math.ceil(utils.min_t_norm_operator(confidence_scores) * 100)
         if is_rejecting:
             example_str += "#pos(" + id + "@{}, {{}}, {{accept, reject}}, {{\n".format(weight)
         else:
