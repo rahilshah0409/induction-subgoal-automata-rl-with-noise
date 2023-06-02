@@ -236,16 +236,17 @@ class ISAAlgorithmBase(LearningAlgorithm):
 
         main_dir = "labelling_function/"
         model_dir = main_dir + model_sub_dir
-        model_loc = model_dir + "final_model.pth"
-        model_metrics_loc = model_dir + "final_model_metrics.pkl"
-        events_captured_loc = model_dir + "events_captured.pkl"
+        model_fname_base = "model_fixed_seed"
+        model_loc = model_dir + model_fname_base + ".pth"
+        model_metrics_loc = model_dir + model_fname_base + "_metrics.pkl"
+        events_captured_loc = model_dir + "events_captured_fixed_seed.pkl"
 
         labelling_function.load_state_dict(torch.load(model_loc, map_location=torch.device('cpu')))
         with open(model_metrics_loc, "rb") as f:
             model_metrics = pickle.load(f)
         with open(events_captured_loc, "rb") as g:
             events_captured = pickle.load(g)
-        events_captured_filtered = sorted(list(filter(lambda pair: pair[0] == "black" or pair[1] == "black", events_captured)))
+        events_captured_filtered = sorted(list(filter(lambda pair: (pair[0] == "black" and pair[1] != "black") or (pair[0] != "black" and pair[1] == "black"), events_captured)))
 
         return labelling_function, model_metrics, events_captured_filtered
     
