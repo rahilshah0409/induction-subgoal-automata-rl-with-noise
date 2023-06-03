@@ -158,8 +158,8 @@ class ISAAlgorithmBase(LearningAlgorithm):
 
         # get actual initial automaton state (performs verification that there is only one possible initial state!)
         current_automaton_state = self._get_initial_automaton_state_successors(domain_id, initial_observations)
-        print("Initial automaton state")
-        print(current_automaton_state)
+        # print("Initial automaton state")
+        # print(current_automaton_state)
 
         # update the automaton if the initial state achieves the goal and the example is not covered
         if self.interleaved_automaton_learning and self._can_learn_new_automaton(domain_id, task):
@@ -171,8 +171,8 @@ class ISAAlgorithmBase(LearningAlgorithm):
                 print("We have updated the automaton, a counterexample seen at the initial state")
                 current_automaton_state = self._get_initial_automaton_state_successors(domain_id, initial_observations)
 
-        print("Current automaton state")
-        print(current_automaton_state)
+        # print("Current automaton state")
+        # print(current_automaton_state)
         # whether the episode execution must be stopped (an automaton is learnt in the middle)
         interrupt_episode = False
         automaton = self.automata[domain_id]
@@ -193,8 +193,8 @@ class ISAAlgorithmBase(LearningAlgorithm):
             next_automaton_state = self._get_next_automaton_state(self.automata[domain_id], current_automaton_state,
                                                                   observations, observations_changed)
 
-            print("Next automaton state")
-            print(next_automaton_state)
+            # print("Next automaton state")
+            # print(next_automaton_state)
 
             # episode has to be interrupted if an automaton is learnt
             if not interrupt_episode and self.interleaved_automaton_learning and self._can_learn_new_automaton(domain_id, task):
@@ -338,20 +338,6 @@ class ISAAlgorithmBase(LearningAlgorithm):
         shortened_event_name = self._neaten_event(event)
         precision = model_metrics["precision"][event]
         return shortened_event_name, precision
-        # precision = model_metrics["precision"][event]
-        # if event == ('black', 'blue'):
-        #     return "b", precision
-        # elif event == ('black', 'lime'):
-        #     return "g", precision
-        # elif event == ('black', 'red'):
-        #     return "r", precision
-        # elif event == ('black', 'cyan'):
-        #     return "c", precision
-        # elif event == ('black', 'magenta'):
-        #     return "m", precision
-        # elif event == ('black', 'yellow'):
-        #     return "y", precision
-
     
     def _neaten_event(self, event):
         return str(event[0][0]) + str(event[1][0])    
@@ -370,8 +356,8 @@ class ISAAlgorithmBase(LearningAlgorithm):
 
     def _get_initial_automaton_state_successors(self, domain_id, observations):
         automaton = self._get_automaton(domain_id)
-        print(automaton.states)
-        print(automaton.edges)
+        # print(automaton.states)
+        # print(automaton.edges)
         initial_state = automaton.get_initial_state()
         return self._get_next_automaton_state(automaton, initial_state, observations, True)
 
@@ -448,9 +434,9 @@ class ISAAlgorithmBase(LearningAlgorithm):
 
     def _reset_examples(self):
         # there is a set of examples for each domain
-        self.goal_examples = [set() for _ in range(self.num_domains)]
-        self.dend_examples = [set() for _ in range(self.num_domains)]
-        self.inc_examples = [set() for _ in range(self.num_domains)]
+        self.goal_examples = [[] for _ in range(self.num_domains)]
+        self.dend_examples = [[] for _ in range(self.num_domains)]
+        self.inc_examples = [[] for _ in range(self.num_domains)]
 
     def _update_examples(self, task, domain_id, current_automaton_state, observation_history, compressed_observation_history):
         """Updates the set of examples. Returns True if the set of examples has been updated and False otherwise. Note
@@ -460,29 +446,29 @@ class ISAAlgorithmBase(LearningAlgorithm):
         if task.is_terminal():
             if task.is_goal_achieved():
                 if current_automaton_state is None or not automaton.is_accept_state(current_automaton_state):
-                    print("We have observed a positive counterexample!")
+                    print("We have a candidate positive counterexample!")
                     # print(observation_history)
-                    self._update_example_set(self.goal_examples[domain_id], observation_history, compressed_observation_history)
-                    return True
+                    update_success = self._update_example_list(self.goal_examples[domain_id], observation_history, compressed_observation_history)
+                    return update_success
             else:
                 if current_automaton_state is None or not automaton.is_reject_state(current_automaton_state):
-                    print("We have observed a negative counterexample!")
+                    print("We have a candidate negative counterexample!")
                     # print(observation_history)
-                    self._update_example_set(self.dend_examples[domain_id], observation_history, compressed_observation_history)
-                    return True
+                    update_success = self._update_example_list(self.dend_examples[domain_id], observation_history, compressed_observation_history)
+                    return update_success
         else:
             # just update incomplete examples if at least we have one goal or one deadend example (avoid overflowing the
             # set of incomplete unnecessarily)
             if current_automaton_state is None or automaton.is_terminal_state(current_automaton_state):
-                print("We have observed an incomplete counterexample!")
+                print("We have a candidate incomplete counterexample!")
                 # print(current_automaton_state is None)
                 # print(observation_history)
-                self._update_example_set(self.inc_examples[domain_id], observation_history, compressed_observation_history)
-                return True
+                update_success = self._update_example_list(self.inc_examples[domain_id], observation_history, compressed_observation_history)
+                return update_success
         return False  # whether example sets have been updated
 
     # Do I add the notion of an example weight when adding the observation history to the example set?
-    def _update_example_set(self, example_set, observation_history, compressed_observation_history):
+    def _update_example_list(self, example_list, observation_history, compressed_observation_history):
         """Updates the a given example set with the corresponding history of observations depending on whether
         compressed traces are used or not to learn the automata. An exception is thrown if a trace is readded."""
         # print(example_set)
@@ -495,10 +481,11 @@ class ISAAlgorithmBase(LearningAlgorithm):
         # else:
         #     history_tuple = tuple(observation_history)
 
-        for example in example_set:
+        for example in example_list:
             if history_tuple == example[0]:
-                raise RuntimeError("An example that an automaton is currently covered cannot be uncovered afterwards!")
-        example_set.add((history_tuple, confidence_scores))
+                return False
+        example_list.append((history_tuple, confidence_scores))
+        return True
         # if history_tuple not in example_set:
         #     example_set.add((history_tuple, confidence_scores))
         # else:
@@ -540,7 +527,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
                     print("The number of states in the automaton has been increased to " + str(self.num_automaton_states[domain_id]))
                     print("Updating automaton...")
                 # raise RuntimeError("You haven't managed to produce an automaton!")
-                self._update_automaton(task, domain_id)
+                self._update_automaton(task, domain_id, events_captured)
         else:
             raise RuntimeError("Error: Couldn't find an automaton under the specified timeout!")
 
@@ -562,8 +549,8 @@ class ISAAlgorithmBase(LearningAlgorithm):
         # the sets of examples are sorted to make sure that ILASP produces the same solution for the same sets (ILASP
         # can produce different hypothesis for the same set of examples but given in different order)
         generate_ilasp_task(self.num_automaton_states[domain_id], ISAAlgorithmBase.ACCEPTING_STATE_NAME,
-                            ISAAlgorithmBase.REJECTING_STATE_NAME, observables, sorted(self.goal_examples[domain_id]),
-                            sorted(self.dend_examples[domain_id]), sorted(self.inc_examples[domain_id]),
+                            ISAAlgorithmBase.REJECTING_STATE_NAME, observables, self.goal_examples[domain_id],
+                            self.dend_examples[domain_id], self.inc_examples[domain_id],
                             self.get_automaton_task_folder(domain_id), ilasp_task_filename, self.symmetry_breaking_method,
                             self.max_disjunction_size, self.learn_acyclic_graph, self.use_compressed_traces,
                             self.avoid_learning_only_negative, self.prioritize_optimal_solutions, self.binary_folder_name)

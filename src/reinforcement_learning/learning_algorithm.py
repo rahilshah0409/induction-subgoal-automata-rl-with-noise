@@ -233,7 +233,7 @@ class LearningAlgorithm(ABC):
     '''
     def _get_observations_as_ordered_tuple(self, observation_set):
         observations_list = list(observation_set)
-        utils.pair_sort_by_ord(observations_list)
+        utils.sort_by_ord(observations_list)
         return tuple(observations_list)
 
     def _update_histories(self, observation_history, compressed_observation_history, observations):
@@ -244,15 +244,16 @@ class LearningAlgorithm(ABC):
 
         events_set, confidence = observations
 
+        # print(events_set)
         observations_tuple = self._get_observations_as_ordered_tuple(events_set)
         # print(events_set)
         # print(observations_tuple)
         observation_history.append((observations_tuple, confidence))
         # print(observation_history)
 
-        observations_changed = len(compressed_observation_history) == 0 or observations_tuple != compressed_observation_history[-1]
+        observations_changed = len(compressed_observation_history) == 0 or observations_tuple != compressed_observation_history[-1][0]
         if observations_changed:
-            compressed_observation_history.append(observations_tuple)
+            compressed_observation_history.append((observations_tuple, confidence))
 
         if self.use_compressed_traces:
             return observations_changed

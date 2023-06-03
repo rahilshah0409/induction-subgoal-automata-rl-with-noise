@@ -46,7 +46,7 @@ def path_exists(path):
 
 
 def sort_by_ord(input_list):
-    input_list.sort(key=lambda s: ord(s.lower()))
+    input_list.sort(key=lambda s: ord(s[1].lower()))
 
 
 def pair_sort_by_ord(input_list):

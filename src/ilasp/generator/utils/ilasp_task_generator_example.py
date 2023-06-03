@@ -56,6 +56,9 @@ def get_longest_example_length(goal_examples, dend_examples, inc_examples):
 def _generate_goal_examples(examples, is_rejecting):
     example_str = ""
     ids = []
+    print("Look here!")
+    print(examples)
+    # example_list = sorted(list(examples))
     for i in range(len(examples)):
         (trace_tuple, confidence_scores) = examples[i]
         id = "p{}".format(i)
@@ -87,6 +90,8 @@ def _generate_deadend_examples(examples):
 def _generate_incomplete_examples(examples, is_rejecting):
     example_str = ""
     ids = []
+    print("Look here for incomplete examples!")
+    print(examples)
     for i in range(len(examples)):
         (trace_tuple, confidence_scores) = examples[i]
         id = "i{}".format(i)
