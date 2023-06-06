@@ -233,7 +233,7 @@ class LearningAlgorithm(ABC):
     '''
     def _get_observations_as_ordered_tuple(self, observation_set):
         observations_list = list(observation_set)
-        utils.sort_by_ord(observations_list)
+        utils.sort_by_ord_env_vocab(observations_list)
         return tuple(observations_list)
 
     def _update_histories(self, observation_history, compressed_observation_history, observations):

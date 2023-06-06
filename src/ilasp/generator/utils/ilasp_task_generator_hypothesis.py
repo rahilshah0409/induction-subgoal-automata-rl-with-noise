@@ -104,7 +104,8 @@ def _generate_connected_hypothesis_rules(num_states, accepting_state, rejecting_
 
 
 def _get_hypothesis_space_with_injections(hypothesis_space_filename):
-    hypothesis_space = ["#max_penalty(%d).\n" % MAX_PENALTY]
+    # hypothesis_space = ["#max_penalty(%d).\n" % MAX_PENALTY]
+    hypothesis_space = [""]
     with open(hypothesis_space_filename) as f:
         counter = 0
         for line in f:

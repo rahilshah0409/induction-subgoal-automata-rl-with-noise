@@ -1,4 +1,5 @@
 from abc import abstractmethod
+import random
 import numpy as np
 import os
 import pickle
@@ -81,7 +82,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
         self.ilasp_version = utils.get_param(params, ISAAlgorithmBase.ILASP_VERSION_FIELD, "2")
         self.ilasp_compute_minimal = utils.get_param(params, ISAAlgorithmBase.ILASP_COMPUTE_MINIMAL, False)
         self.num_starting_states = utils.get_param(params, ISAAlgorithmBase.STARTING_NUM_STATES_FIELD, 3)
-        self.num_automaton_states = self.num_starting_states * np.ones(self.num_domains, dtype=np.int)
+        self.num_automaton_states = self.num_starting_states * np.full(self.num_domains, fill_value=1, dtype=np.int)
         self.use_restricted_observables = utils.get_param(params, ISAAlgorithmBase.USE_RESTRICTED_OBSERVABLES, False)
         self.max_disjunction_size = utils.get_param(params, ISAAlgorithmBase.MAX_DISJUNCTION_SIZE, 1)
         self.max_body_literals = utils.get_param(params, ISAAlgorithmBase.MAX_BODY_LITERALS, 1)
@@ -150,10 +151,11 @@ class ISAAlgorithmBase(LearningAlgorithm):
         total_reward, episode_length = 0, 0
         observation_history, compressed_observation_history = [], []
         current_state = task.reset()
+        confidence = 0.76
 
         # get initial observations from the labelling function model and initialise histories
-        # initial_observations = self._get_task_observations_from_env(task)
-        initial_observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, current_state)
+        initial_observations = self._get_task_observations_from_env_artificial_noise(task, confidence)
+        # initial_observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, current_state)
         self._update_histories(observation_history, compressed_observation_history, initial_observations)
 
         # get actual initial automaton state (performs verification that there is only one possible initial state!)
@@ -181,8 +183,8 @@ class ISAAlgorithmBase(LearningAlgorithm):
             current_automaton_state_id = automaton.get_state_id(current_automaton_state)
             action = self._choose_action(domain_id, task_id, current_state, automaton, current_automaton_state_id)
             next_state, reward, is_terminal, _ = task.step(action)
-            # observations = self._get_task_observations_from_env(task)
-            observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, next_state)
+            observations = self._get_task_observations_from_env_artificial_noise(task, confidence)
+            # observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, next_state)
 
             # whether observations have changed or not is important for QRM when using compressed traces
             observations_changed = self._update_histories(observation_history, compressed_observation_history, observations)
@@ -307,6 +309,29 @@ class ISAAlgorithmBase(LearningAlgorithm):
         if self.use_restricted_observables:
             return observations.intersection(task.get_restricted_observables())
         return observations
+    
+    def _get_task_observations_from_env_artificial_noise(self, task, confidence):
+        observations = task.get_observations()
+        observations_to_return = set()
+        observables = sorted(task.get_observables())
+        observables.append("none")
+        confidence_scores = [1.0]
+        for obs in observations:
+            index = observables.index(obs)
+            init_weight = (1 - confidence) / 6
+            weights = [init_weight for _ in range(len(observables))]
+            weights[index] = confidence
+            obs_chosen = random.choices(observables, weights=weights, k=1)[0]
+            if obs_chosen == "none":
+                confidence_scores.append(init_weight)
+                break
+            else:
+                observations_to_return.add(obs_chosen)
+                if obs == obs_chosen:
+                    confidence_scores.append(confidence)
+                else:
+                    confidence_scores.append(init_weight)
+        return (observations_to_return, utils.min_t_norm_operator(confidence_scores))
     
     def _get_task_observations_from_model(self, task, labelling_function, model_metrics, events_captured, state):
         state_tensor = Variable(torch.FloatTensor(state))
@@ -521,13 +546,14 @@ class ISAAlgorithmBase(LearningAlgorithm):
                 # if the task is UNSATISFIABLE, it means the number of states is not enough to cover the examples, so
                 # the number of states is incremented by 1 and try again
                 print("The task is unsatisfiable with {} states".format(self.num_automaton_states[domain_id]))
-                self.num_automaton_states[domain_id] += 1
+                raise RuntimeError("You haven't managed to produce an automaton!")
+                # self.num_automaton_states[domain_id] += 1
 
-                if self.debug:
-                    print("The number of states in the automaton has been increased to " + str(self.num_automaton_states[domain_id]))
-                    print("Updating automaton...")
-                # raise RuntimeError("You haven't managed to produce an automaton!")
-                self._update_automaton(task, domain_id, events_captured)
+                # if self.debug:
+                #     print("The number of states in the automaton has been increased to " + str(self.num_automaton_states[domain_id]))
+                #     print("Updating automaton...")
+                # # raise RuntimeError("You haven't managed to produce an automaton!")
+                # self._update_automaton(task, domain_id, events_captured)
         else:
             raise RuntimeError("Error: Couldn't find an automaton under the specified timeout!")
 
@@ -539,15 +565,16 @@ class ISAAlgorithmBase(LearningAlgorithm):
         ilasp_task_filename = ISAAlgorithmBase.AUTOMATON_TASK_FILENAME % self.automaton_counters[domain_id]
 
         # Do the events here also need to be recovered from the labelling function model and not the environment?
-        # observables = task.get_observables()
-        # if self.use_restricted_observables:
-        #     observables = task.get_restricted_observables()
+        observables = task.get_observables()
+        if self.use_restricted_observables:
+            observables = task.get_restricted_observables()
 
-        observables = set(map(self._neaten_event, events_captured))
+        # observables = set(map(self._neaten_event, events_captured))
         # print(observables)
 
         # the sets of examples are sorted to make sure that ILASP produces the same solution for the same sets (ILASP
         # can produce different hypothesis for the same set of examples but given in different order)
+        self.num_automaton_states[domain_id] = 4
         generate_ilasp_task(self.num_automaton_states[domain_id], ISAAlgorithmBase.ACCEPTING_STATE_NAME,
                             ISAAlgorithmBase.REJECTING_STATE_NAME, observables, self.goal_examples[domain_id],
                             self.dend_examples[domain_id], self.inc_examples[domain_id],

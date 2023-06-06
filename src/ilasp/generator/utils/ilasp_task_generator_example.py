@@ -56,14 +56,12 @@ def get_longest_example_length(goal_examples, dend_examples, inc_examples):
 def _generate_goal_examples(examples, is_rejecting):
     example_str = ""
     ids = []
-    print("Look here!")
-    print(examples)
     # example_list = sorted(list(examples))
     for i in range(len(examples)):
         (trace_tuple, confidence_scores) = examples[i]
         id = "p{}".format(i)
         ids.append(id)
-        weight = math.ceil(utils.min_t_norm_operator(confidence_scores) * 100)
+        weight = math.ceil(utils.min_t_norm_operator(confidence_scores) * 1000)
         if is_rejecting:
             example_str += "#pos(" + id + "@{}, {{accept}}, {{reject}}, {{\n".format(weight)
         else:
@@ -80,7 +78,7 @@ def _generate_deadend_examples(examples):
         (trace_tuple, confidence_scores) = examples[i]
         id = "n{}".format(i)
         ids.append(id)
-        weight = math.ceil(utils.min_t_norm_operator(confidence_scores) * 100)
+        weight = math.ceil(utils.min_t_norm_operator(confidence_scores) * 1000)
         example_str += "#pos(" + id + "@{}, {{reject}}, {{accept}}, {{\n".format(weight)
         example_str += _generate_example(trace_tuple)
         example_str += "}).\n\n"
@@ -90,13 +88,11 @@ def _generate_deadend_examples(examples):
 def _generate_incomplete_examples(examples, is_rejecting):
     example_str = ""
     ids = []
-    print("Look here for incomplete examples!")
-    print(examples)
     for i in range(len(examples)):
         (trace_tuple, confidence_scores) = examples[i]
         id = "i{}".format(i)
         ids.append(id)
-        weight = math.ceil(utils.min_t_norm_operator(confidence_scores) * 100)
+        weight = math.ceil(utils.min_t_norm_operator(confidence_scores) * 1000)
         if is_rejecting:
             example_str += "#pos(" + id + "@{}, {{}}, {{accept, reject}}, {{\n".format(weight)
         else:
