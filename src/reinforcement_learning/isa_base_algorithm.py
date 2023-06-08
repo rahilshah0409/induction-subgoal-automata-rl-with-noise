@@ -154,8 +154,8 @@ class ISAAlgorithmBase(LearningAlgorithm):
         confidence = 0.94
 
         # get initial observations from the labelling function model and initialise histories
-        initial_observations = self._get_task_observations_from_env_artificial_noise(task, confidence)
-        # initial_observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, current_state)
+        # initial_observations = self._get_task_observations_from_env_artificial_noise(task, confidence)
+        initial_observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, current_state)
         self._update_histories(observation_history, compressed_observation_history, initial_observations)
 
         # get actual initial automaton state (performs verification that there is only one possible initial state!)
