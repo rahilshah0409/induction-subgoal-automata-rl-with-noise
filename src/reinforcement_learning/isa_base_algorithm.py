@@ -151,12 +151,17 @@ class ISAAlgorithmBase(LearningAlgorithm):
         total_reward, episode_length = 0, 0
         observation_history, compressed_observation_history = [], []
         current_state = task.reset()
+        confidence = None
         confidence = 0.94
+        use_model = confidence is None
 
         # get initial observations from the labelling function model and initialise histories
-        initial_observations = self._get_task_observations_from_env_artificial_noise(task, confidence)
-        # initial_observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, current_state)
-        self._update_histories(observation_history, compressed_observation_history, initial_observations)
+        initial_observations = None
+        if not use_model:
+            initial_observations = self._get_task_observations_from_env_artificial_noise(task, confidence)
+        else:
+            initial_observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, current_state)
+        self._update_histories(observation_history, compressed_observation_history, initial_observations, use_model)
 
         # get actual initial automaton state (performs verification that there is only one possible initial state!)
         current_automaton_state = self._get_initial_automaton_state_successors(domain_id, initial_observations)
@@ -168,7 +173,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
             updated_automaton = self._perform_interleaved_automaton_learning(task, domain_id,
                                                                              current_automaton_state,
                                                                              observation_history,
-                                                                             compressed_observation_history, events_captured)
+                                                                             compressed_observation_history, events_captured, use_model)
             if updated_automaton:  # get the actual initial state as done before
                 print("We have updated the automaton, a counterexample seen at the initial state")
                 current_automaton_state = self._get_initial_automaton_state_successors(domain_id, initial_observations)
@@ -187,7 +192,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
             # observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, next_state)
 
             # whether observations have changed or not is important for QRM when using compressed traces
-            observations_changed = self._update_histories(observation_history, compressed_observation_history, observations)
+            observations_changed = self._update_histories(observation_history, compressed_observation_history, observations, confidence is None)
 
             if self.train_model:
                 self._update_q_functions(task_id, current_state, action, next_state, is_terminal, observations, observations_changed)
@@ -202,7 +207,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
             if not interrupt_episode and self.interleaved_automaton_learning and self._can_learn_new_automaton(domain_id, task):
                 interrupt_episode = self._perform_interleaved_automaton_learning(task, domain_id, next_automaton_state,
                                                                                  observation_history,
-                                                                                 compressed_observation_history, events_captured)
+                                                                                 compressed_observation_history, events_captured, use_model)
 
             if not interrupt_episode:
                 automaton = self.automata[domain_id]
@@ -440,7 +445,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
         pass
 
     def _perform_interleaved_automaton_learning(self, task, domain_id, current_automaton_state, observation_history,
-                                                compressed_observation_history, events_captured):
+                                                compressed_observation_history, events_captured, use_own_vocab):
         """Updates the set of examples based on the current observed trace. In case the set of example is updated, it
         makes a call to the automata learner. Returns True if a new automaton has been learnt, False otherwise."""
         updated_examples = self._update_examples(task, domain_id, current_automaton_state, observation_history,
@@ -452,7 +457,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
                 else:
                     counterexample = str(observation_history)
                 print("Updating automaton " + str(domain_id) + "... The counterexample is: " + counterexample)
-            self._update_automaton(task, domain_id, events_captured)
+            self._update_automaton(task, domain_id, events_captured, use_own_vocab)
             return True  # whether a new automaton has been learnt
 
         return False
@@ -516,11 +521,11 @@ class ISAAlgorithmBase(LearningAlgorithm):
         # else:
         #     raise RuntimeError("An example that an automaton is currently covered cannot be uncovered afterwards!")
 
-    def _update_automaton(self, task, domain_id, events_captured):
+    def _update_automaton(self, task, domain_id, events_captured, use_own_vocab):
         self.automaton_counters[domain_id] += 1  # increment the counter of the number of aut. learnt for a domain
 
         print("Generating ILASP task")
-        self._generate_ilasp_task(task, domain_id, events_captured)  # generate the automata learning task
+        self._generate_ilasp_task(task, domain_id, events_captured, use_own_vocab)  # generate the automata learning task
 
         print("Solving ILASP task")
         solver_success = self._solve_ilasp_task(domain_id)  # run the task solver
@@ -558,7 +563,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
             raise RuntimeError("Error: Couldn't find an automaton under the specified timeout!")
 
     # Somewhere in this generation of the ILASP task I need to pass in the fact that the goal, dend and inc examples have weights attached to them?
-    def _generate_ilasp_task(self, task, domain_id, events_captured):
+    def _generate_ilasp_task(self, task, domain_id, events_captured, use_own_vocab):
         # print(self.get_automaton_task_folder(domain_id))
         utils.mkdir(self.get_automaton_task_folder(domain_id))
 
@@ -568,8 +573,8 @@ class ISAAlgorithmBase(LearningAlgorithm):
         observables = task.get_observables()
         if self.use_restricted_observables:
             observables = task.get_restricted_observables()
-
-        # observables = set(map(self._neaten_event, events_captured))
+        if use_own_vocab:
+            observables = set(map(self._neaten_event, events_captured))
         # print(observables)
 
         # the sets of examples are sorted to make sure that ILASP produces the same solution for the same sets (ILASP

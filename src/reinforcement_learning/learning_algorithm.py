@@ -231,12 +231,15 @@ class LearningAlgorithm(ABC):
     '''
     History and Observation Management
     '''
-    def _get_observations_as_ordered_tuple(self, observation_set):
+    def _get_observations_as_ordered_tuple(self, observation_set, own_vocab):
         observations_list = list(observation_set)
-        utils.sort_by_ord_env_vocab(observations_list)
+        if own_vocab:
+            utils.sort_by_ord_two_lettered_vocab(observations_list)
+        else:
+            utils.sort_by_ord_env_vocab(observations_list)
         return tuple(observations_list)
 
-    def _update_histories(self, observation_history, compressed_observation_history, observations):
+    def _update_histories(self, observation_history, compressed_observation_history, observations, own_vocab=True):
         # update histories only if the observation is non-empty
         # print("updating the history here")
         if self.ignore_empty_observations and len(observations) == 0:
@@ -245,7 +248,7 @@ class LearningAlgorithm(ABC):
         events_set, confidence = observations
 
         # print(events_set)
-        observations_tuple = self._get_observations_as_ordered_tuple(events_set)
+        observations_tuple = self._get_observations_as_ordered_tuple(events_set, own_vocab)
         # print(events_set)
         # print(observations_tuple)
         observation_history.append((observations_tuple, confidence))

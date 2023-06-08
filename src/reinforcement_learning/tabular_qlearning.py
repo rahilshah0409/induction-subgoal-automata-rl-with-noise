@@ -23,13 +23,13 @@ class TabularQLearning(LearningAlgorithm):
 
         # get initial observations and initialise histories
         initial_observations = task.get_observations()
-        self._update_histories(observation_history, compressed_observation_history, initial_observations)
+        self._update_histories(observation_history, compressed_observation_history, initial_observations, False)
 
         while not task.is_terminal() and episode_length < self.max_episode_length:
             action = self._choose_egreedy_action(task, current_state, self.q_functions[domain_id][task_id])
             next_state, reward, is_terminal, observations = task.step(action)
 
-            self._update_histories(observation_history, compressed_observation_history, observations)
+            self._update_histories(observation_history, compressed_observation_history, observations, False)
 
             if self.train_model:
                 self._update_q_function(domain_id, task_id, current_state, action, next_state, reward, is_terminal)

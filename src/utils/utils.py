@@ -45,7 +45,7 @@ def path_exists(path):
     return os.path.exists(path)
 
 
-def sort_by_ord(input_list):
+def sort_by_ord_two_lettered_vocab(input_list):
     input_list.sort(key=lambda s: ord(s[1].lower()))
 
 def sort_by_ord_env_vocab(input_list):
