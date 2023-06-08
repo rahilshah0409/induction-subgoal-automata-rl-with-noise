@@ -237,11 +237,11 @@ class ISAAlgorithmBase(LearningAlgorithm):
         labelling_function = State2EventNet(input_vec_size, output_vec_size, num_layers, num_neurons)
 
         main_dir = "labelling_function/"
-        model_dir = main_dir + model_sub_dir
-        model_fname_base = "model_fixed_seed"
+        model_dir = main_dir + model_sub_dir + "4-model-fixed-seed-small-lr/"
+        model_fname_base = "model"
         model_loc = model_dir + model_fname_base + ".pth"
         model_metrics_loc = model_dir + model_fname_base + "_metrics.pkl"
-        events_captured_loc = model_dir + "events_captured_fixed_seed.pkl"
+        events_captured_loc = model_dir + "events_captured.pkl"
 
         labelling_function.load_state_dict(torch.load(model_loc, map_location=torch.device('cpu')))
         with open(model_metrics_loc, "rb") as f:

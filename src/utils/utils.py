@@ -76,5 +76,6 @@ def min_t_norm_operator(scores):
 def product_t_norm_operator(scores):
     return reduce(mul, scores)
 
+
 def average_score(scores):
     return np.mean(scores)
