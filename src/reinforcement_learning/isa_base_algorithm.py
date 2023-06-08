@@ -151,7 +151,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
         total_reward, episode_length = 0, 0
         observation_history, compressed_observation_history = [], []
         current_state = task.reset()
-        confidence = 0.76
+        confidence = 0.94
 
         # get initial observations from the labelling function model and initialise histories
         initial_observations = self._get_task_observations_from_env_artificial_noise(task, confidence)
@@ -331,7 +331,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
                     confidence_scores.append(confidence)
                 else:
                     confidence_scores.append(init_weight)
-        return (observations_to_return, utils.min_t_norm_operator(confidence_scores))
+        return (observations_to_return, utils.average_score(confidence_scores))
     
     def _get_task_observations_from_model(self, task, labelling_function, model_metrics, events_captured, state):
         state_tensor = Variable(torch.FloatTensor(state))
