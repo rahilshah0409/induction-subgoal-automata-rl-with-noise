@@ -151,9 +151,9 @@ class ISAAlgorithmBase(LearningAlgorithm):
         total_reward, episode_length = 0, 0
         observation_history, compressed_observation_history = [], []
         current_state = task.reset()
-        confidence = None
-        confidence = 0.94
-        use_model = confidence is None
+        # confidence = None
+        confidence = -1
+        use_model = confidence < 0 or confidence > 1
 
         # get initial observations from the labelling function model and initialise histories
         initial_observations = None
@@ -242,7 +242,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
         labelling_function = State2EventNet(input_vec_size, output_vec_size, num_layers, num_neurons)
 
         main_dir = "labelling_function/"
-        model_dir = main_dir + model_sub_dir + "4model-fixed-seed-small-lr/"
+        model_dir = main_dir + model_sub_dir + "5model-fixed-seed-improved-again/"
         model_fname_base = "model"
         model_loc = model_dir + model_fname_base + ".pth"
         model_metrics_loc = model_dir + model_fname_base + "_metrics.pkl"
