@@ -154,8 +154,8 @@ class ISAAlgorithmBase(LearningAlgorithm):
         confidence = 0.94
 
         # get initial observations from the labelling function model and initialise histories
-        # initial_observations = self._get_task_observations_from_env_artificial_noise(task, confidence)
-        initial_observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, current_state)
+        initial_observations = self._get_task_observations_from_env_artificial_noise(task, confidence)
+        # initial_observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, current_state)
         self._update_histories(observation_history, compressed_observation_history, initial_observations)
 
         # get actual initial automaton state (performs verification that there is only one possible initial state!)
@@ -237,7 +237,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
         labelling_function = State2EventNet(input_vec_size, output_vec_size, num_layers, num_neurons)
 
         main_dir = "labelling_function/"
-        model_dir = main_dir + model_sub_dir + "4-model-fixed-seed-small-lr/"
+        model_dir = main_dir + model_sub_dir + "4model-fixed-seed-small-lr/"
         model_fname_base = "model"
         model_loc = model_dir + model_fname_base + ".pth"
         model_metrics_loc = model_dir + model_fname_base + "_metrics.pkl"
