@@ -188,11 +188,14 @@ class ISAAlgorithmBase(LearningAlgorithm):
             current_automaton_state_id = automaton.get_state_id(current_automaton_state)
             action = self._choose_action(domain_id, task_id, current_state, automaton, current_automaton_state_id)
             next_state, reward, is_terminal, _ = task.step(action)
-            observations = self._get_task_observations_from_env_artificial_noise(task, confidence)
-            # observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, next_state)
+            observations = None
+            if use_model:
+                observations = self._get_task_observations_from_model(task, labelling_function, model_metrics, events_captured, next_state)
+            else:
+                observations = self._get_task_observations_from_env_artificial_noise(task, confidence)
 
             # whether observations have changed or not is important for QRM when using compressed traces
-            observations_changed = self._update_histories(observation_history, compressed_observation_history, observations, confidence is None)
+            observations_changed = self._update_histories(observation_history, compressed_observation_history, observations, use_model)
 
             if self.train_model:
                 self._update_q_functions(task_id, current_state, action, next_state, is_terminal, observations, observations_changed)
@@ -511,9 +514,10 @@ class ISAAlgorithmBase(LearningAlgorithm):
         # else:
         #     history_tuple = tuple(observation_history)
 
-        for example in example_list:
-            if history_tuple == example[0]:
-                return False
+        # I don't think we should be ignoring counterexamples that have already appeared because 
+        # for example in example_list:
+        #     if history_tuple == example[0]:
+        #         return False
         example_list.append((history_tuple, confidence_scores))
         return True
         # if history_tuple not in example_set:

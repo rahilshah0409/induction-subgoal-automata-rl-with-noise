@@ -59,7 +59,7 @@ def _generate_goal_examples(examples, is_rejecting):
     # example_list = sorted(list(examples))
     for i in range(len(examples)):
         (trace_tuple, confidence_scores) = examples[i]
-        id = "p{}".format(i)
+        id = "g{}".format(i)
         ids.append(id)
         weight = math.ceil(utils.average_score(confidence_scores) * 1000)
         if is_rejecting:
@@ -76,7 +76,7 @@ def _generate_deadend_examples(examples):
     ids = []
     for i in range(len(examples)):
         (trace_tuple, confidence_scores) = examples[i]
-        id = "n{}".format(i)
+        id = "d{}".format(i)
         ids.append(id)
         weight = math.ceil(utils.average_score(confidence_scores) * 1000)
         example_str += "#pos(" + id + "@{}, {{reject}}, {{accept}}, {{\n".format(weight)

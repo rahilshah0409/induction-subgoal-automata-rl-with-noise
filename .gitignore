@@ -134,4 +134,4 @@ dmypy.json
 
 src/gym-subgoal-automata/
 src/waterworld-experiments/
-src/unsatisfiability-testing/
+src/debugging/
