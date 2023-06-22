@@ -151,8 +151,7 @@ class ISAAlgorithmBase(LearningAlgorithm):
         total_reward, episode_length = 0, 0
         observation_history, compressed_observation_history = [], []
         current_state = task.reset()
-        # confidence = None
-        confidence = -1
+        confidence = 0.94
         use_model = confidence < 0 or confidence > 1
 
         # get initial observations from the labelling function model and initialise histories
@@ -165,8 +164,6 @@ class ISAAlgorithmBase(LearningAlgorithm):
 
         # get actual initial automaton state (performs verification that there is only one possible initial state!)
         current_automaton_state = self._get_initial_automaton_state_successors(domain_id, initial_observations)
-        # print("Initial automaton state")
-        # print(current_automaton_state)
 
         # update the automaton if the initial state achieves the goal and the example is not covered
         if self.interleaved_automaton_learning and self._can_learn_new_automaton(domain_id, task):
@@ -178,8 +175,6 @@ class ISAAlgorithmBase(LearningAlgorithm):
                 print("We have updated the automaton, a counterexample seen at the initial state")
                 current_automaton_state = self._get_initial_automaton_state_successors(domain_id, initial_observations)
 
-        # print("Current automaton state")
-        # print(current_automaton_state)
         # whether the episode execution must be stopped (an automaton is learnt in the middle)
         interrupt_episode = False
         automaton = self.automata[domain_id]
